@@ -1,0 +1,16 @@
+{
+  "Http": {
+    "ListenAddress": "localhost:4242"
+  },
+  "Mail": {
+    "Host": "localhost",
+    "From": "from@localhost",
+    "To": "to@localhost"
+  },
+  "Apps": [
+    {
+      "Name": "sample",
+      "Dir": "/some/app/dir"
+    }
+  ]
+}
