@@ -1,4 +1,4 @@
 default: build
 
 build:
-	go build -o ghwebhooks main.go
+	go build -o bin/ghwebhooks main.go
