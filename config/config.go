@@ -6,7 +6,9 @@ import (
 )
 
 type Config struct {
-	Http struct {
+	Dev    bool
+	Secret string
+	Http   struct {
 		ListenAddress string
 	}
 	Mail struct {

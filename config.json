@@ -1,4 +1,6 @@
 {
+  "Dev": true,
+  "Secret": "secret",
   "Http": {
     "ListenAddress": "localhost:4242"
   },

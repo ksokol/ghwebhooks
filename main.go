@@ -3,6 +3,7 @@ package main
 import (
 	"ghwebhooks/config"
 	"ghwebhooks/deploy"
+	"ghwebhooks/security"
 	"log"
 	"net/http"
 )
@@ -10,7 +11,7 @@ import (
 func main() {
 	config := config.LoadConfig()
 
-	http.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/", security.Secured(func(resp http.ResponseWriter, req *http.Request) {
 		for _, app := range config.Apps {
 			if app.Name == req.URL.Path[1:] {
 				deploy.Deploy(app.Dir, &config)
@@ -19,7 +20,7 @@ func main() {
 		}
 
 		resp.WriteHeader(404)
-	})
+	}, &config))
 
 	log.Fatal(http.ListenAndServe(config.Http.ListenAddress, nil))
 }
