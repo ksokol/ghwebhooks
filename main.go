@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"ghwebhooks/config"
 	"ghwebhooks/deploy"
 	"ghwebhooks/security"
@@ -24,7 +25,17 @@ func main() {
 					return
 				}
 
-				deploy.Deploy(app.Dir, &config)
+				deployLog := deploy.Deploy(app.Dir, &config)
+				json, err := json.MarshalIndent(deployLog, "", "  ")
+
+				if err != nil {
+					resp.WriteHeader(500)
+					return
+				}
+
+				resp.Header().Set("Content-Type", "application/json")
+				resp.Write(json)
+
 				activeDeployments.Delete(app.Name)
 
 				return
