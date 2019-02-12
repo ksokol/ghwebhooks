@@ -5,7 +5,7 @@
     "ListenAddress": "localhost:4242"
   },
   "Mail": {
-    "Host": "localhost",
+    "Host": "localhost:25",
     "From": "from@localhost",
     "To": "to@localhost"
   },

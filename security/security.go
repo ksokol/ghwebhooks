@@ -6,7 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"ghwebhooks/config"
+	"ghwebhooks/types"
 	"io/ioutil"
 	"net/http"
 )
@@ -25,7 +25,7 @@ func retrieveSignature(req *http.Request) (string, error) {
 	return signature, err
 }
 
-func valid(signature string, req *http.Request, config *config.Config) bool {
+func valid(signature string, req *http.Request, config *types.Config) bool {
 	body, err := ioutil.ReadAll(req.Body)
 	req.Body = ioutil.NopCloser(bytes.NewReader(body))
 
@@ -40,7 +40,7 @@ func valid(signature string, req *http.Request, config *config.Config) bool {
 	return hmac.Equal([]byte(signature), []byte(expectedMAC))
 }
 
-func Secured(handler http.HandlerFunc, config *config.Config) http.HandlerFunc {
+func Secured(handler http.HandlerFunc, config *types.Config) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		if config.Dev {
 			handler(resp, req)
