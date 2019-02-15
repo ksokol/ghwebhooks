@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"ghwebhooks/deploy"
+	"ghwebhooks/github"
 	"ghwebhooks/security"
 	"ghwebhooks/types"
 	"log"
@@ -15,44 +16,40 @@ func main() {
 
 	var activeDeployments sync.Map
 
-	http.HandleFunc("/", security.Secured(func(resp http.ResponseWriter, req *http.Request) {
-		for _, app := range config.Apps {
-			if app.Name == req.URL.Path[1:] {
-				context := types.NewContext(app.Name, app.Dir, &config)
-				status := types.NewStatus()
+	http.HandleFunc("/", security.Secured(github.SupportsApp(func(resp http.ResponseWriter, req *http.Request) {
+		status := types.NewStatus()
+		statusCode := 200
 
-				_, loaded := activeDeployments.LoadOrStore(app.Name, nil)
+		if artefact, err := github.Parse(req.Body, &status); err != nil {
+			status.Fail(err)
+			statusCode = 400
+		} else {
+			appConfig := config.For(artefact.Name)
+			context := types.NewContext(artefact, appConfig)
+			_, loaded := activeDeployments.LoadOrStore(context.AppName, nil)
 
-				if loaded == true {
-					resp.WriteHeader(409)
-					return
-				}
-
+			if loaded == true {
+				statusCode = 409
+			} else {
 				deploy.Deploy(&context, &status)
-				json, err := json.MarshalIndent(status, "", "  ")
-
-				if err != nil {
-					resp.WriteHeader(500)
-					return
-				}
-
-				var statusCode int
-				if statusCode = 200; !status.Success {
-					statusCode = 500
-				}
-
-				resp.WriteHeader(statusCode)
-				resp.Header().Set("Content-Type", "application/json")
-				resp.Write(json)
-
 				activeDeployments.Delete(context.AppName)
-
-				return
 			}
 		}
 
-		resp.WriteHeader(404)
-	}, &config))
+		writeRespone(resp, &status, statusCode)
+	}, &config), &config))
 
 	log.Fatal(http.ListenAndServe(config.Http.ListenAddress, nil))
+}
+
+func writeRespone(resp http.ResponseWriter, status *types.Status, statusCode int) {
+	json, err := json.MarshalIndent(status, "", "  ")
+
+	if err != nil || !status.Success {
+		statusCode = 500
+	}
+
+	resp.WriteHeader(statusCode)
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Write(json)
 }

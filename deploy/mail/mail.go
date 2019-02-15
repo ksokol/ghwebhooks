@@ -13,7 +13,7 @@ func createBody(context *types.Context) []byte {
 			context.Mail.From,
 			context.Mail.To,
 			context.AppName,
-			"TODO"))
+			context.Artefact.Tag))
 }
 
 func Sendmail(context *types.Context) error {
