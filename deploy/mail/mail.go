@@ -2,6 +2,7 @@ package mail
 
 import (
 	"fmt"
+	"ghwebhooks/config"
 	"ghwebhooks/types"
 	"net/smtp"
 )
@@ -10,16 +11,16 @@ func createBody(context *types.Context) []byte {
 	return []byte(
 		fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s (%s) deployed\r\n\r\n",
-			context.Mail.From,
-			context.Mail.To,
+			config.GetMailFrom(),
+			config.GetMailTo(),
 			context.AppName,
 			context.Artefact.Tag))
 }
 
 func Sendmail(context *types.Context) error {
-	from := context.Mail.From
-	to := []string{context.Mail.To}
+	from := config.GetMailFrom()
+	to := []string{config.GetMailTo()}
 	body := createBody(context)
 
-	return smtp.SendMail(context.Mail.Host, nil, from, to, body)
+	return smtp.SendMail(config.GetMailHost(), nil, from, to, body)
 }

@@ -1,5 +1,7 @@
 package types
 
+import "ghwebhooks/config"
+
 type Artefact struct {
 	ReleaseID   int
 	Name        string
@@ -10,15 +12,13 @@ type Artefact struct {
 type Context struct {
 	AppName string
 	AppDir  string
-	Mail
 	Artefact
 }
 
-func NewContext(artefact Artefact, config AppConfig) Context {
+func NewContext(artefact Artefact, config config.AppConfig) Context {
 	return Context{
 		config.Name,
 		config.Dir,
-		config.Mail,
 		artefact,
 	}
 }

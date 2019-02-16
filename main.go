@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"ghwebhooks/config"
 	"ghwebhooks/deploy"
 	"ghwebhooks/github"
 	"ghwebhooks/security"
@@ -12,8 +13,6 @@ import (
 )
 
 func main() {
-	config := LoadConfig()
-
 	var activeDeployments sync.Map
 
 	http.HandleFunc("/", security.Secured(github.SupportsApp(func(resp http.ResponseWriter, req *http.Request) {
@@ -24,7 +23,7 @@ func main() {
 			status.Fail(err)
 			statusCode = 400
 		} else {
-			appConfig := config.For(artefact.Name)
+			appConfig, _ := config.GetAppConfig(artefact.Name)
 			context := types.NewContext(artefact, appConfig)
 			_, loaded := activeDeployments.LoadOrStore(context.AppName, nil)
 
@@ -37,9 +36,9 @@ func main() {
 		}
 
 		writeRespone(resp, &status, statusCode)
-	}, &config), &config))
+	})))
 
-	log.Fatal(http.ListenAndServe(config.Http.ListenAddress, nil))
+	log.Fatal(http.ListenAndServe(config.GetHttpListenerAddress(), nil))
 }
 
 func writeRespone(resp http.ResponseWriter, status *types.Status, statusCode int) {

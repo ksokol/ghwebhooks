@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"ghwebhooks/config"
 	"ghwebhooks/types"
 	"io"
 	"io/ioutil"
@@ -28,7 +29,7 @@ type GithubEvent struct {
 	Release Release
 }
 
-func SupportsApp(handler http.HandlerFunc, config *types.Config) http.HandlerFunc {
+func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		var githubEvent GithubEvent
 		statusCode := 400
@@ -37,11 +38,9 @@ func SupportsApp(handler http.HandlerFunc, config *types.Config) http.HandlerFun
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 
 		if err := parsePayload(bodyClone, &githubEvent); err == nil {
-			for _, app := range config.Apps {
-				if app.Name == githubEvent.Repository.Name {
-					handler(resp, req)
-					return
-				}
+			if _, ok := config.GetAppConfig(githubEvent.Repository.Name); ok {
+				handler(resp, req)
+				return
 			}
 
 			statusCode = 404
