@@ -16,9 +16,14 @@ import (
 type Release struct {
 	ID      int
 	TagName string `json:"tag_name"`
+	Draft   bool   `json:"draft"`
 	Assets  []struct {
 		Url string `json:"browser_download_url"`
 	}
+}
+
+func (r *Release) isValid() bool {
+	return r.ID != 0 && !r.Draft
 }
 
 type GithubEvent struct {
@@ -27,6 +32,10 @@ type GithubEvent struct {
 		ReleaseUrl string `json:"releases_url"`
 	}
 	Release Release
+}
+
+func (g *GithubEvent) isValidRelease() bool {
+	return g.Release.isValid() && g.Repository.Name != ""
 }
 
 func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
@@ -59,23 +68,19 @@ func Parse(body io.ReadCloser, status *types.Status) (GithubEvent, error) {
 
 	name := githubEvent.Repository.Name
 
-	if isInvalid(&githubEvent) {
+	if !githubEvent.isValidRelease() {
 		status.LogF("did not find a valid release for '%s'", name)
 
 		if err := updateWithLatestRelease(&githubEvent, status); err != nil {
 			return githubEvent, err
 		}
 
-		if isInvalid(&githubEvent) {
+		if !githubEvent.isValidRelease() {
 			return githubEvent, fmt.Errorf("release not found for '%s'", name)
 		}
 	}
 
 	return githubEvent, nil
-}
-
-func isInvalid(githubEvent *GithubEvent) bool {
-	return githubEvent.Release.ID == 0 || githubEvent.Repository.Name == ""
 }
 
 func updateWithLatestRelease(githubEvent *GithubEvent, status *types.Status) error {
