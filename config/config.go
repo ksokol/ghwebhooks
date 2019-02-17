@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 )
 
@@ -41,16 +42,16 @@ func GetMailFrom() string { return config.Mail.From }
 
 func GetMailHost() string { return config.Mail.Host }
 
-func GetAppConfig(appName string) (appConfig AppConfig, ok bool) {
+func GetAppConfig(appName string) (appConfig AppConfig, err error) {
 	for _, app := range config.Apps {
 		if app.Name == appName {
 			return AppConfig{
 				app.Name,
 				app.Dir,
-			}, true
+			}, err
 		}
 	}
-	return appConfig, false
+	return appConfig, fmt.Errorf("app config for '%s' not found", appName)
 }
 
 func init() {

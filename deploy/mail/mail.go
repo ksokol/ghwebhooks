@@ -3,11 +3,11 @@ package mail
 import (
 	"fmt"
 	"ghwebhooks/config"
-	"ghwebhooks/types"
+	"ghwebhooks/context"
 	"net/smtp"
 )
 
-func createBody(context *types.Context) []byte {
+func createBody(context *context.Context) []byte {
 	return []byte(
 		fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s (%s) deployed\r\n\r\n",
@@ -17,7 +17,7 @@ func createBody(context *types.Context) []byte {
 			context.Artefact.Tag))
 }
 
-func Sendmail(context *types.Context) error {
+func Sendmail(context *context.Context) error {
 	from := config.GetMailFrom()
 	to := []string{config.GetMailTo()}
 	body := createBody(context)

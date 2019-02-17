@@ -1,13 +1,14 @@
 package deploy
 
 import (
+	"ghwebhooks/context"
 	"ghwebhooks/deploy/mail"
 	"ghwebhooks/types"
 	"os"
 	"os/exec"
 )
 
-func Deploy(context *types.Context, status *types.Status) {
+func Deploy(context *context.Context, status *types.Status) {
 	os.Chdir(context.AppDir)
 	out, err := exec.Command("python", "cron.py").Output()
 

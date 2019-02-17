@@ -38,7 +38,7 @@ func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 
 		if err := parsePayload(bodyClone, &githubEvent); err == nil {
-			if _, ok := config.GetAppConfig(githubEvent.Repository.Name); ok {
+			if _, err := config.GetAppConfig(githubEvent.Repository.Name); err == nil {
 				handler(resp, req)
 				return
 			}
@@ -50,12 +50,11 @@ func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func Parse(body io.ReadCloser, status *types.Status) (types.Artefact, error) {
-	var artefact types.Artefact
+func Parse(body io.ReadCloser, status *types.Status) (GithubEvent, error) {
 	var githubEvent GithubEvent
 
 	if err := parsePayload(body, &githubEvent); err != nil {
-		return artefact, err
+		return githubEvent, err
 	}
 
 	name := githubEvent.Repository.Name
@@ -64,20 +63,15 @@ func Parse(body io.ReadCloser, status *types.Status) (types.Artefact, error) {
 		status.LogF("did not find a valid release for '%s'", name)
 
 		if err := updateWithLatestRelease(&githubEvent, status); err != nil {
-			return artefact, err
+			return githubEvent, err
 		}
 
 		if isInvalid(&githubEvent) {
-			return artefact, fmt.Errorf("release not found for '%s'", name)
+			return githubEvent, fmt.Errorf("release not found for '%s'", name)
 		}
 	}
 
-	artefact.ReleaseID = githubEvent.Release.ID
-	artefact.Name = githubEvent.Repository.Name
-	artefact.Tag = githubEvent.Release.TagName
-	artefact.ArtefactURL = githubEvent.Release.Assets[0].Url
-
-	return artefact, nil
+	return githubEvent, nil
 }
 
 func isInvalid(githubEvent *GithubEvent) bool {

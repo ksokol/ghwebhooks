@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"ghwebhooks/config"
+	"ghwebhooks/context"
 	"ghwebhooks/deploy"
 	"ghwebhooks/github"
 	"ghwebhooks/security"
@@ -19,15 +20,11 @@ func main() {
 		status := types.NewStatus()
 		statusCode := 200
 
-		if artefact, err := github.Parse(req.Body, &status); err != nil {
+		if context, err := context.NewContext(req.Body, &status); err != nil {
 			status.Fail(err)
 			statusCode = 400
 		} else {
-			appConfig, _ := config.GetAppConfig(artefact.Name)
-			context := types.NewContext(artefact, appConfig)
-			_, loaded := activeDeployments.LoadOrStore(context.AppName, nil)
-
-			if loaded == true {
+			if _, loaded := activeDeployments.LoadOrStore(context.AppName, nil); loaded == true {
 				statusCode = 409
 			} else {
 				deploy.Deploy(&context, &status)
