@@ -18,11 +18,6 @@ func Deploy(context *context.Context, status *types.Status) {
 	}
 
 	status.Log(string(out[:]))
-	status.Log("sending email")
 
-	if err := mail.Sendmail(context); err != nil {
-		status.Fail(err)
-	} else {
-		status.Log("email send")
-	}
+	mail.Sendmail(context, status)
 }

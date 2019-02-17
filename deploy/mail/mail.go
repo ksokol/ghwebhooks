@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ghwebhooks/config"
 	"ghwebhooks/context"
+	"ghwebhooks/types"
 	"net/smtp"
 )
 
@@ -17,10 +18,15 @@ func createBody(context *context.Context) []byte {
 			context.Artefact.Tag))
 }
 
-func Sendmail(context *context.Context) error {
+func Sendmail(context *context.Context, status *types.Status) {
 	from := config.GetMailFrom()
 	to := []string{config.GetMailTo()}
 	body := createBody(context)
 
-	return smtp.SendMail(config.GetMailHost(), nil, from, to, body)
+	status.Log("sending email")
+	if err := smtp.SendMail(config.GetMailHost(), nil, from, to, body); err != nil {
+		status.Fail(err)
+	} else {
+		status.Log("email send")
+	}
 }
