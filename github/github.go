@@ -2,7 +2,6 @@ package github
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"ghwebhooks/config"
 	"ghwebhooks/types"
@@ -10,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type Release struct {
@@ -26,12 +24,22 @@ func (r *Release) isValid() bool {
 	return r.ID != 0 && !r.Draft
 }
 
+type Repository struct {
+	Name       string `json:"name"`
+	ReleaseUrl string `json:"releases_url"`
+}
+
+func (r *Repository) releasesUrl() string {
+	return strings.Replace(r.ReleaseUrl, "{/id}", "", 1)
+}
+
+func (r *Repository) releaseUrlFor(path interface{}) string {
+	return fmt.Sprintf("%v/%v", r.releasesUrl(), path)
+}
+
 type GithubEvent struct {
-	Repository struct {
-		Name       string `json:"name"`
-		ReleaseUrl string `json:"releases_url"`
-	}
-	Release Release
+	Repository Repository
+	Release    Release
 }
 
 func (g *GithubEvent) isValidRelease() bool {
@@ -46,7 +54,7 @@ func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
 		bodyClone := ioutil.NopCloser(bytes.NewBuffer(buf))
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 
-		if err := parsePayload(bodyClone, &githubEvent); err == nil {
+		if err := parseBody(bodyClone, &githubEvent); err == nil {
 			if _, err := config.GetAppConfig(githubEvent.Repository.Name); err == nil {
 				handler(resp, req)
 				return
@@ -62,14 +70,14 @@ func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
 func Parse(body io.ReadCloser, status *types.Status) (GithubEvent, error) {
 	var githubEvent GithubEvent
 
-	if err := parsePayload(body, &githubEvent); err != nil {
+	if err := parseBody(body, &githubEvent); err != nil {
 		return githubEvent, err
 	}
 
 	name := githubEvent.Repository.Name
 
 	if !githubEvent.isValidRelease() {
-		status.LogF("did not find a valid release for '%s'", name)
+		status.LogF("no valid release found for '%s'", name)
 
 		if err := updateWithLatestRelease(&githubEvent, status); err != nil {
 			return githubEvent, err
@@ -83,8 +91,33 @@ func Parse(body io.ReadCloser, status *types.Status) (GithubEvent, error) {
 	return githubEvent, nil
 }
 
+func RemoveDraftReleases(githubEvent *GithubEvent, status *types.Status) {
+	var releases []Release
+	url := githubEvent.Repository.releasesUrl()
+
+	status.LogF("fetching latest releases from '%s'", url)
+
+	if err := Get(url, &releases); err != nil {
+		status.Fail(err)
+		return
+	}
+
+	for _, release := range releases {
+		status.LogF("release: %s, draft: %t", release.TagName, release.Draft)
+
+		if release.Draft {
+			status.LogF("removing draft release '%s'", release.TagName)
+			if err := Delete(githubEvent.Repository.releaseUrlFor(release.ID)); err != nil {
+				status.LogF("draft release '%s' not removed due to '%s'", release.TagName, err.Error())
+			} else {
+				status.LogF("removed draft release '%s'", release.TagName)
+			}
+		}
+	}
+}
+
 func updateWithLatestRelease(githubEvent *GithubEvent, status *types.Status) error {
-	latestReleaseURL := strings.Replace(githubEvent.Repository.ReleaseUrl, "{/id}", "/latest", 1)
+	latestReleaseURL := githubEvent.Repository.releaseUrlFor("latest")
 
 	status.LogF("fetching latest release for '%s' from '%s'", githubEvent.Repository.Name, latestReleaseURL)
 	release, err := fetchRelease(latestReleaseURL)
@@ -95,19 +128,6 @@ func updateWithLatestRelease(githubEvent *GithubEvent, status *types.Status) err
 
 func fetchRelease(releaseURL string) (Release, error) {
 	var release Release
-	var err error
-	client := http.Client{
-		Timeout: time.Duration(5 * time.Second),
-	}
-
-	if resp, err := client.Get(releaseURL); err == nil {
-		err = parsePayload(resp.Body, &release)
-	}
-
+	err := Get(releaseURL, &release)
 	return release, err
-}
-
-func parsePayload(payload io.ReadCloser, v interface{}) error {
-	decoder := json.NewDecoder(payload)
-	return decoder.Decode(v)
 }

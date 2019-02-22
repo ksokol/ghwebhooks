@@ -8,8 +8,11 @@ import (
 
 type Config struct {
 	Dev    bool
-	Secret string
-	Http   struct {
+	Github struct {
+		Secret      string
+		AccessToken string
+	}
+	Http struct {
 		ListenAddress string
 	}
 	Mail struct {
@@ -34,7 +37,9 @@ func GetHttpListenerAddress() string { return config.Http.ListenAddress }
 
 func IsDevEnv() bool { return config.Dev }
 
-func GetSecret() string { return config.Secret }
+func GetSecret() string { return config.Github.Secret }
+
+func GetAccessToken() string { return config.Github.AccessToken }
 
 func GetMailTo() string { return config.Mail.To }
 

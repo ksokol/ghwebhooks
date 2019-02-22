@@ -17,6 +17,7 @@ type Artefact struct {
 type Context struct {
 	AppName string
 	AppDir  string
+	Event   github.GithubEvent
 	Artefact
 }
 
@@ -30,6 +31,7 @@ func NewContext(body io.ReadCloser, status *types.Status) (context Context, err 
 			return Context{
 				appConfig.Name,
 				appConfig.Dir,
+				githubEvent,
 				Artefact{
 					githubEvent.Release.ID,
 					githubEvent.Repository.Name,

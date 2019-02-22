@@ -1,6 +1,9 @@
 {
   "Dev": true,
-  "Secret": "secret",
+  "Github": {
+    "Secret": "secret",
+    "AccessToken": "githubAccessToken"
+  },
   "Http": {
     "ListenAddress": "localhost:4242"
   },

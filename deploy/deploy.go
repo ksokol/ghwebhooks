@@ -3,6 +3,7 @@ package deploy
 import (
 	"ghwebhooks/context"
 	"ghwebhooks/deploy/mail"
+	"ghwebhooks/github"
 	"ghwebhooks/types"
 	"os"
 	"os/exec"
@@ -18,6 +19,11 @@ func Deploy(context *context.Context, status *types.Status) {
 	}
 
 	status.Log(string(out[:]))
-
 	mail.Sendmail(context, status)
+
+	if status.Success != true {
+		return
+	}
+
+	github.RemoveDraftReleases(&context.Event, status)
 }
