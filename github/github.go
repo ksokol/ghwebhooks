@@ -27,14 +27,23 @@ func (r *Release) isValid() bool {
 type Repository struct {
 	Name       string `json:"name"`
 	ReleaseUrl string `json:"releases_url"`
+	GitRefsUrl string `json:"git_refs_url"`
 }
 
 func (r *Repository) releasesUrl() string {
 	return strings.Replace(r.ReleaseUrl, "{/id}", "", 1)
 }
 
+func (r *Repository) gitRefsUrl() string {
+	return strings.Replace(r.GitRefsUrl, "{/sha}", "", 1)
+}
+
 func (r *Repository) releaseUrlFor(path interface{}) string {
 	return fmt.Sprintf("%v/%v", r.releasesUrl(), path)
+}
+
+func (r *Repository) gitRefsUrlFor(ref interface{}) string {
+	return fmt.Sprintf("%v/%v", r.gitRefsUrl(), ref)
 }
 
 type GithubEvent struct {
@@ -111,6 +120,35 @@ func RemoveDraftReleases(githubEvent *GithubEvent, status *types.Status) {
 				status.LogF("draft release '%s' not removed due to '%s'", release.TagName, err.Error())
 			} else {
 				status.LogF("removed draft release '%s'", release.TagName)
+			}
+		}
+	}
+}
+
+func RemovePreviousReleases(githubEvent *GithubEvent, status *types.Status) {
+	var releases []Release
+	url := githubEvent.Repository.releasesUrl()
+
+	status.LogF("fetching latest releases from '%s'", url)
+
+	if err := Get(url, &releases); err != nil {
+		status.Fail(err)
+		return
+	}
+
+	for _, release := range releases {
+		if release.ID == githubEvent.Release.ID {
+			continue
+		}
+
+		status.LogF("release: %s, draft: %t", release.TagName, release.Draft)
+
+		if !release.Draft {
+			status.LogF("removing release '%s'", release.TagName)
+			if err := Delete(githubEvent.Repository.gitRefsUrlFor("tags/" + release.TagName)); err != nil {
+				status.LogF("release '%s' not removed due to '%s'", release.TagName, err.Error())
+			} else {
+				status.LogF("removed release '%s'", release.TagName)
 			}
 		}
 	}
