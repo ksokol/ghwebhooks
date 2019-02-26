@@ -7,6 +7,14 @@ import (
 	"os/exec"
 )
 
+func systemctl(arg ...string) error {
+	return exec.Command("systemctl", arg...).Run()
+}
+
+func start(service string) error {
+	return systemctl("start", service)
+}
+
 func Update(context *context.Context, status *types.Status) {
 	os.Chdir(context.AppDir)
 	out, err := exec.Command("python", "cron.py", context.ArtefactURL).Output()
@@ -17,4 +25,9 @@ func Update(context *context.Context, status *types.Status) {
 	}
 
 	status.Log(string(out[:]))
+
+	status.Log("starting service")
+	if err := start(context.AppName); err != nil {
+		status.Fail(err)
+	}
 }
