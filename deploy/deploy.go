@@ -2,8 +2,8 @@ package deploy
 
 import (
 	"ghwebhooks/context"
-	"ghwebhooks/deploy/mail"
 	"ghwebhooks/github"
+	"ghwebhooks/mail"
 	"ghwebhooks/types"
 	"os"
 	"os/exec"
