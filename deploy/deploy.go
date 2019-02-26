@@ -26,5 +26,10 @@ func Deploy(context *context.Context, status *types.Status) {
 	}
 
 	github.RemovePreviousReleases(&context.Event, status)
+
+	if status.Success != true {
+		return
+	}
+
 	github.RemoveDraftReleases(&context.Event, status)
 }
