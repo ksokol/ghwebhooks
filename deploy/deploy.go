@@ -4,30 +4,20 @@ import (
 	"ghwebhooks/context"
 	"ghwebhooks/github"
 	"ghwebhooks/mail"
+	"ghwebhooks/service"
 	"ghwebhooks/types"
-	"os"
-	"os/exec"
 )
 
 func Deploy(context *context.Context, status *types.Status) {
-	os.Chdir(context.AppDir)
-	out, err := exec.Command("python", "cron.py", context.ArtefactURL).Output()
-
-	if err != nil {
-		status.Fail(err)
+	if service.Update(context, status); status.Success != true {
 		return
 	}
 
-	status.Log(string(out[:]))
-	mail.Sendmail(context, status)
-
-	if status.Success != true {
+	if mail.Sendmail(context, status); status.Success != true {
 		return
 	}
 
-	github.RemovePreviousReleases(&context.Event, status)
-
-	if status.Success != true {
+	if github.RemovePreviousReleases(&context.Event, status); status.Success != true {
 		return
 	}
 
