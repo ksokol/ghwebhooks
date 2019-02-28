@@ -15,6 +15,10 @@ func Update(context *context.Context, status *types.Status) {
 		return
 	}
 
+	if stopService(context, status); status.Success != true {
+		return
+	}
+
 	if download(context, status); status.Success != true {
 		return
 	}
@@ -23,9 +27,15 @@ func Update(context *context.Context, status *types.Status) {
 		return
 	}
 
-	status.Log("starting service")
-	if err := Start(context.AppName); err != nil {
+	startService(context, status)
+}
+
+func stopService(context *context.Context, status *types.Status) {
+	status.Log("stopping service")
+	if ok, err := Stop(context.AppName); err != nil {
 		status.Fail(err)
+	} else {
+		status.LogF("service stopped: %v", ok)
 	}
 }
 
@@ -54,5 +64,14 @@ func replaceArtefact(user UserLookup, context *context.Context, status *types.St
 
 	if err := os.Chown(newpath, user.uid, user.gid); err != nil {
 		status.Fail(err)
+	}
+}
+
+func startService(context *context.Context, status *types.Status) {
+	status.Log("starting service")
+	if ok, err := Start(context.AppName); err != nil {
+		status.Fail(err)
+	} else {
+		status.LogF("service started: %v", ok)
 	}
 }

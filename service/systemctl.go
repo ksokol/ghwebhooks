@@ -1,24 +1,40 @@
 package service
 
-import "os/exec"
+import (
+	"os/exec"
+	"strings"
+)
 
-func Start(service string) error {
-	if installed, err := isInstalled(service); err != nil || !installed {
-		return err
-	}
-	return systemctl("start", service)
-}
+const (
+	active   = "active"
+	inactive = "inactive"
+	unknown  = "unknown"
+)
 
-func isInstalled(service string) (bool, error) {
-	out, err := exec.Command("systemctl", "is-active", service).Output()
+func Start(service string) (bool, error) { return command("start", inactive, service) }
 
-	if err != nil {
+func Stop(service string) (bool, error) { return command("stop", active, service) }
+
+func command(command string, expectedState string, service string) (bool, error) {
+	if currentState, err := getServiceState(service); err != nil || currentState != expectedState {
 		return false, err
 	}
+	return true, systemctl(command, service)
+}
 
-	state := string(out[:])
+func getServiceState(service string) (string, error) {
+	out, err := exec.Command("systemctl", "is-active", service).Output()
+	state := strings.TrimSuffix(string(out[:]), "\n")
 
-	return state == "active" || state == "inactive", err
+	/*
+	 systemctl returns code 3 in case of an inactive or unknown service.
+	 Therefore we need to check stdout for the unit state before.
+	*/
+	if state == active || state == inactive || state == unknown {
+		return state, nil
+	}
+
+	return "", err
 }
 
 func systemctl(arg ...string) error {
