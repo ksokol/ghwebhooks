@@ -3,9 +3,9 @@ package service
 import (
 	"fmt"
 	"ghwebhooks/context"
+	"ghwebhooks/github"
 	"ghwebhooks/types"
 	"os"
-	"os/exec"
 )
 
 func Update(context *context.Context, status *types.Status) {
@@ -15,11 +15,10 @@ func Update(context *context.Context, status *types.Status) {
 		return
 	}
 
-	if stopService(context, status); status.Success != true {
+	if downloadArtefact(context, status); status.Success != true {
 		return
 	}
-
-	if download(context, status); status.Success != true {
+	if stopService(context, status); status.Success != true {
 		return
 	}
 
@@ -39,20 +38,27 @@ func stopService(context *context.Context, status *types.Status) {
 	}
 }
 
-func download(context *context.Context, status *types.Status) {
-	os.Chdir(context.AppDir)
-	out, err := exec.Command("python", "cron.py", context.ArtefactURL).Output()
+func downloadArtefact(context *context.Context, status *types.Status) {
+	tmpFile := tmpFile(context)
+
+	out, err := os.Create(tmpFile)
+	defer out.Close()
 
 	if err != nil {
 		status.Fail(err)
 		return
 	}
 
-	status.Log(string(out[:]))
+	url := context.ArtefactURL
+	status.LogF("downloading artefact %s", url)
+
+	if err := github.Download(url, out); err != nil {
+		status.Fail(err)
+	}
 }
 
 func replaceArtefact(user UserLookup, context *context.Context, status *types.Status) {
-	oldpath := fmt.Sprintf("%s/%s.jar", context.AppDir, "tmp")
+	oldpath := tmpFile(context)
 	newpath := fmt.Sprintf("%s/%s.jar", context.AppDir, context.AppName)
 
 	status.LogF("replacing %s with %s", oldpath, newpath)
@@ -65,6 +71,10 @@ func replaceArtefact(user UserLookup, context *context.Context, status *types.St
 	if err := os.Chown(newpath, user.uid, user.gid); err != nil {
 		status.Fail(err)
 	}
+}
+
+func tmpFile(context *context.Context) string {
+	return fmt.Sprintf("%s/%s.jar", context.AppDir, "tmp")
 }
 
 func startService(context *context.Context, status *types.Status) {
