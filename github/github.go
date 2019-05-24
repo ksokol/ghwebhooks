@@ -47,6 +47,7 @@ func (r *Repository) gitRefsUrlFor(ref interface{}) string {
 }
 
 type GithubEvent struct {
+	Action     string
 	Repository Repository
 	Release    Release
 }
@@ -55,24 +56,32 @@ func (g *GithubEvent) isValidRelease() bool {
 	return g.Release.isValid() && g.Repository.Name != ""
 }
 
-func SupportsApp(handler http.HandlerFunc) http.HandlerFunc {
+func supportsApp(githubEvent *GithubEvent) bool {
+	if _, err := config.GetAppConfig(githubEvent.Repository.Name); err == nil {
+		return true
+	}
+	return false
+}
+
+func supportsAction(githubEvent *GithubEvent) bool {
+	return githubEvent.Action == "published"
+}
+
+func Supports(handler http.HandlerFunc) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		var githubEvent GithubEvent
-		statusCode := 400
 		buf, _ := ioutil.ReadAll(req.Body)
 		bodyClone := ioutil.NopCloser(bytes.NewBuffer(buf))
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 
 		if err := parseBody(bodyClone, &githubEvent); err == nil {
-			if _, err := config.GetAppConfig(githubEvent.Repository.Name); err == nil {
+			if supportsAction(&githubEvent) && supportsApp(&githubEvent) {
 				handler(resp, req)
 				return
 			}
-
-			statusCode = 404
 		}
 
-		resp.WriteHeader(statusCode)
+		resp.WriteHeader(404)
 	}
 }
 

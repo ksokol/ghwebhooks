@@ -11,7 +11,7 @@ import (
 
 func main() {
 
-	http.HandleFunc("/", security.Secured(github.SupportsApp(handler.DeployHandler)))
+	http.HandleFunc("/", security.Secured(github.Supports(handler.DeployHandler)))
 
 	log.Fatal(http.ListenAndServe(config.GetHttpListenerAddress(), nil))
 }
