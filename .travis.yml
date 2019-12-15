@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - "1.11"
+  - "1.12"
 
 before_deploy:
   - git config --local user.name "${GIT_USER_NAME}"
