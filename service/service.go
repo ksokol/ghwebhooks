@@ -39,6 +39,11 @@ func stopService(context *context.Context, status *types.Status) {
 }
 
 func downloadArtefact(context *context.Context, status *types.Status) {
+	if len(context.ArtefactURL) == 0 {
+		status.FailMessage("artefact url not present")
+		return
+	}
+
 	tmpFile := tmpFile(context)
 
 	out, err := os.Create(tmpFile)

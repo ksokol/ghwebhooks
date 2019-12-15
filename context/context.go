@@ -28,16 +28,21 @@ func NewContext(body io.ReadCloser, status *types.Status) (context Context, err 
 		if appConfig, err := config.GetAppConfig(githubEvent.Repository.Name); err != nil {
 			return context, err
 		} else {
-			return Context{
-				appConfig.Name,
-				appConfig.Dir,
-				githubEvent,
-				Artefact{
+			var artefact Artefact
+			if len(githubEvent.Release.Assets) == 1 {
+				artefact = Artefact{
 					githubEvent.Release.ID,
 					githubEvent.Repository.Name,
 					githubEvent.Release.TagName,
 					githubEvent.Release.Assets[0].Url,
-				},
+				}
+			}
+
+			return Context{
+				appConfig.Name,
+				appConfig.Dir,
+				githubEvent,
+				artefact,
 			}, err
 		}
 	}

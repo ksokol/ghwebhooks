@@ -20,13 +20,18 @@ func NewStatus() Status {
 	return Status{Success: true}
 }
 
-func (s *Status) LogF(format string, a ...interface{}) {
-	s.Log(fmt.Sprintf(format, a...))
+func (s *Status) LogF(format string, values ...interface{}) {
+	s.Log(fmt.Sprintf(format, values...))
 }
 
 func (s *Status) Fail(err error) {
 	s.Success = false
 	s.Log(err.Error())
+}
+
+func (s *Status) FailMessage(err string) {
+	s.Success = false
+	s.Log(err)
 }
 
 func (s *Status) Log(message ...string) {
